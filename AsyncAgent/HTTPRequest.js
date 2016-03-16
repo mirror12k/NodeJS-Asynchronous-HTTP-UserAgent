@@ -45,6 +45,13 @@ HTTPRequest.prototype.parse = function(text) {
 	return this;
 };
 
+HTTPRequest.prototype.clone = function() {
+	var clone = HTTPMessage.prototype.clone.call(this);
+	clone.method = this.method;
+	clone.path = this.path.clone();
+	return clone;
+};
+
 HTTPRequest.prototype.stringStatus = function() {
 	return this.method + " " + this.path.stringPath() + " " + this.protocol;
 };

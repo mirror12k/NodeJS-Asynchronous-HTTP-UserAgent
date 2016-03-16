@@ -9,20 +9,22 @@
  * creates a new HTTPMessage object
 */
 function HTTPMessage (protocol, headers, body) {
+	var self = this;
 	if (protocol !== undefined)
-		this.protocol = protocol;
+		self.protocol = protocol;
 	else
-		this.protocol = '';
+		self.protocol = '';
 
+	self.headers = {};
 	if (headers !== undefined)
-		this.headers = headers;
-	else
-		this.headers = {};
+		Object.keys(headers).forEach(function (key) {
+			self.headers[key] = headers[key].slice(0);
+		});
 
 	if (body !== undefined)
-		this.body = body;
+		self.body = body;
 	else
-		this.body = '';
+		self.body = '';
 }
 
 /*
