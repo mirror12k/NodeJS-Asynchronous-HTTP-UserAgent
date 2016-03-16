@@ -97,6 +97,17 @@ URL.prototype.clone = function() {
 	return new URL(this);
 };
 
+URL.prototype.stringPath = function() {
+	s = '';
+	if (this.path !== undefined)
+		s += this.path;
+	if (this.query !== undefined)
+		s += '?'+this.query;
+	if (this.fragment !== undefined)
+		s += '#'+this.fragment;
+	return s;
+};
+
 /*
  * converts all url parts to a url string
 */
@@ -108,12 +119,7 @@ URL.prototype.toString = function() {
 		s += '//'+this.host;
 	if (this.port !== undefined)
 		s += this.port;
-	if (this.path !== undefined)
-		s += this.path;
-	if (this.query !== undefined)
-		s += '?'+this.query;
-	if (this.fragment !== undefined)
-		s += '#'+this.fragment;
+	s += this.stringPath();
 	return s;
 };
 

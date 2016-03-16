@@ -31,3 +31,15 @@ test(new AsyncAgent.URL("../asdf").toString(), '../asdf');
 test(new AsyncAgent.URL("../asdf", "/folder/subfolder/").toString(), '/folder/asdf');
 test(new AsyncAgent.URL("../asdf", "/folder/subfolder/subfile").toString(), '/folder/asdf');
 test(new AsyncAgent.URL("../asdf", "/folder/subfolder/subfile?a=b").toString(), '/folder/asdf?a=b');
+
+
+
+// var msg = new AsyncAgent.HTTPRequest('get', '/', "HTTP/1.1", { asdf : ['qwerty']}, "hahaha");
+
+test(new AsyncAgent.HTTPRequest('get', '/', "HTTP/1.1", { asdf : ['qwerty']}, "hahaha").toString(),
+	"GET / HTTP/1.1\r\nasdf: qwerty\r\n\r\nhahaha");
+test(new AsyncAgent.HTTPRequest('post', 'http://example.org/example', "HTTP/1.0", { asdf : ['qwerty', 'uiop'], var : ['val'] }).toString(), 
+	"POST /example HTTP/1.0\r\nasdf: qwerty\r\nasdf: uiop\r\nvar: val\r\n\r\n");
+test(new AsyncAgent.HTTPRequest().parse("GET /asdf?qwerty#frag HTTP/1.1\r\nheader: value\r\n\r\nasdf").toString(),
+	"GET /asdf?qwerty#frag HTTP/1.1\r\nheader: value\r\n\r\nasdf");
+
