@@ -1,4 +1,4 @@
-/*
+/**
  * AsyncAgent.HTTPResponse
  * represents a basic HTTP request and provides some utility methods
 */
@@ -6,6 +6,10 @@
 var URL = require('./URL');
 var HTTPMessage = require('./HTTPMessage');
 
+/**
+ * HTTPResponse constructor
+ * all arguments optional
+*/
 function HTTPResponse (code, message, protocol, headers, body) {
 	HTTPMessage.call(this, protocol, headers, body);
 
@@ -22,6 +26,10 @@ function HTTPResponse (code, message, protocol, headers, body) {
 
 HTTPResponse.prototype = Object.create(HTTPMessage.prototype);
 
+/**
+ * parses a given http response string and sets values according to the given text
+ * returns itself
+ */
 HTTPResponse.prototype.parse = function(text) {
 	var status = text.split("\r\n", 1)[0];
 	text = text.substring(text.indexOf("\r\n"));
@@ -40,13 +48,16 @@ HTTPResponse.prototype.parse = function(text) {
 	return this;
 };
 
+/**
+ * creates and returns an identical clone of the object
+ */
 HTTPResponse.prototype.clone = function() {
-	var clone = HTTPMessage.prototype.clone.call(this);
-	clone.code = this.code;
-	clone.message = this.message;
-	return clone;
+	return new HTTPResponse(this.code, this.message, this.protocol, this.headers, this.body);
 };
 
+/**
+ * creates the status line string
+ */
 HTTPResponse.prototype.stringStatus = function() {
 	return this.protocol + " " + this.code + " " + this.message;
 };

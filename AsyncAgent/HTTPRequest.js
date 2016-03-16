@@ -1,4 +1,4 @@
-/*
+/**
  * AsyncAgent.HTTPRequest
  * represents a basic HTTP request and provides some utility methods
 */
@@ -6,6 +6,11 @@
 var URL = require('./URL');
 var HTTPMessage = require('./HTTPMessage');
 
+
+/**
+ * HTTPRequest constructor
+ * all arguments optional
+*/
 function HTTPRequest (method, path, protocol, headers, body) {
 	HTTPMessage.call(this, protocol, headers, body);
 
@@ -27,6 +32,10 @@ function HTTPRequest (method, path, protocol, headers, body) {
 
 HTTPRequest.prototype = Object.create(HTTPMessage.prototype);
 
+/**
+ * parses a given http request string and sets its values from it
+ * returns itself
+*/
 HTTPRequest.prototype.parse = function(text) {
 	var status = text.split("\r\n", 1)[0];
 	text = text.substring(text.indexOf("\r\n"));
@@ -45,13 +54,16 @@ HTTPRequest.prototype.parse = function(text) {
 	return this;
 };
 
+/**
+ * creates and returns an identical clone of the object
+ */
 HTTPRequest.prototype.clone = function() {
-	var clone = HTTPMessage.prototype.clone.call(this);
-	clone.method = this.method;
-	clone.path = this.path.clone();
-	return clone;
+	return new HTTPRequest(this.method, this.path, this.protocol, this.headers, this.body);
 };
 
+/**
+ * creates the status line string
+ */
 HTTPRequest.prototype.stringStatus = function() {
 	return this.method + " " + this.path.stringPath() + " " + this.protocol;
 };

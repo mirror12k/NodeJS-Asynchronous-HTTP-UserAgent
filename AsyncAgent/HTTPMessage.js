@@ -1,12 +1,13 @@
-/*
+/**
  * AsyncAgent.HTTPMessage
  * represents a basic HTTP message with functionality for parsing, stringing, accessing, and setting headers
 */
 
 
 
-/*
+/**
  * creates a new HTTPMessage object
+ * all arguments optional
 */
 function HTTPMessage (protocol, headers, body) {
 	var self = this;
@@ -27,7 +28,7 @@ function HTTPMessage (protocol, headers, body) {
 		self.body = '';
 }
 
-/*
+/**
  * parse a given string containing headers
 */
 HTTPMessage.prototype.parseHeaders = function(headers) {
@@ -49,7 +50,7 @@ HTTPMessage.prototype.parseHeaders = function(headers) {
 };
 
 
-/*
+/**
  * get a single (typically the first) header value for a given key
  * returns undefined if no such header exists
 */
@@ -61,7 +62,7 @@ HTTPMessage.prototype.getHeader = function(header) {
 		return undefined;
 	}
 };
-/*
+/**
  * get an array of values for a given header key
  * returns undefined if the header doesn't exist
 */
@@ -70,28 +71,28 @@ HTTPMessage.prototype.getMultiHeader = function(header) {
 };
 
 
-/*
+/**
  * set the value of a header key, replacing any and all previous values
 */
 HTTPMessage.prototype.setHeader = function(header, val) {
 	this.headers[header.toLowerCase()] = [val];
 };
 
-/*
+/**
  * set the array of values for a given header key
 */
 HTTPMessage.prototype.setMultiHeader = function(header, val) {
 	this.headers[header.toLowerCase()] = val;
 };
 
-/*
+/**
  * creates a copy of this message object
 */
 HTTPMessage.prototype.clone = function() {
 	return new HTTPMessage(this.protocol, this.headers, this.body);
 };
 
-/*
+/**
  * convert all headers to a proper header string
 */
 HTTPMessage.prototype.stringHeaders = function() {
@@ -101,13 +102,13 @@ HTTPMessage.prototype.stringHeaders = function() {
 	}).join('');
 };
 
-/*
+/**
  * abstract method for creating a stringified message status
 */
 HTTPMessage.prototype.stringStatus = function () { throw "unimplemented"; };
 
 
-/*
+/**
  * convert this message to a proper http message string
 */
 HTTPMessage.prototype.toString = function() {

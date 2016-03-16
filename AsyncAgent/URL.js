@@ -1,10 +1,11 @@
-/*
+/**
  * AsyncAgent.URL
  * describes a basic url with functions to create new ones
 */
 
 
-/* creates a new url
+/**
+ * creates a new url
  * text = string or URL object which will provide the url parts
  * base = string or URL object which will be used as the url base
 */
@@ -19,7 +20,7 @@ function URL (text, base) {
 		this.base(base);
 }
 
-/*
+/**
  * parses a text url and sets variables based on the parsed text
  * throws an exception if parsing failed
  * returns itself
@@ -61,7 +62,7 @@ function mergePath (path, other) {
 	return parts.join('/');
 }
 
-/*
+/**
  * merges properties with another url by filling in anything missing with the other's parts
  * also merges url paths if they are relative
  * returns itself
@@ -90,7 +91,7 @@ URL.prototype.base = function (other) {
 	return this;
 };
 
-/*
+/**
  * returns a copy of this URL as a new object
 */
 URL.prototype.clone = function() {
@@ -108,7 +109,7 @@ URL.prototype.stringPath = function() {
 	return s;
 };
 
-/*
+/**
  * converts all url parts to a url string
 */
 URL.prototype.toString = function() {
