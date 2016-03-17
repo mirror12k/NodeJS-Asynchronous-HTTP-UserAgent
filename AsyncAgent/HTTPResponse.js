@@ -62,5 +62,51 @@ HTTPResponse.prototype.stringStatus = function() {
 	return this.protocol + " " + this.code + " " + this.message;
 };
 
+/**
+ * returns a boolean indicating if the response has an informational status code
+ */
+HTTPResponse.prototype.isInformational = function() {
+	var code = parseInt(this.code);
+	return code >= 100 && code < 200;
+};
+
+/**
+ * returns a boolean indicating if the response has a successful status code
+ */
+HTTPResponse.prototype.isSuccess = function() {
+	var code = parseInt(this.code);
+	return code >= 200 && code < 300;
+};
+
+/**
+ * returns a boolean indicating if the response has a redirect status code
+ */
+HTTPResponse.prototype.isRedirect = function() {
+	var code = parseInt(this.code);
+	return code >= 300 && code < 400;
+};
+
+/**
+ * returns a boolean indicating if the response has a user error status code
+ */
+HTTPResponse.prototype.isUserError = function() {
+	var code = parseInt(this.code);
+	return code >= 400 && code < 500;
+};
+
+/**
+ * returns a boolean indicating if the response has a server error status code
+ */
+HTTPResponse.prototype.isServerError = function() {
+	var code = parseInt(this.code);
+	return code >= 500 && code < 600;
+};
+
+/**
+ * returns a boolean indicating if the response has an error status code
+ */
+HTTPResponse.prototype.isError = function() {
+	return this.isUserError() || this.isServerError();
+};
 
 module.exports = HTTPResponse;

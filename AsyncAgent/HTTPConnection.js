@@ -24,6 +24,8 @@ function HTTPConnection (host, port) {
 	self.port = port || 80;
 
 	self.on('header', function (res) {
+		self.currentRequest.emitter.emit('header', res);
+
 		if (res.getHeader('content-length') === undefined) {
 			self.emit('response', res);
 		} else {
@@ -40,11 +42,14 @@ HTTPConnection.prototype = Object.create(events.EventEmitter.prototype);
  * queues an http request to sent to the webserver
  * the optional callback is called with the http response when it is complete
  */
-HTTPConnection.prototype.request = function(req, cb) {
-	console.log("new request to url: " + req.path);
-	this.requestPipe.push({ request : req, callback : cb });
+HTTPConnection.prototype.request = function(req) {
+	var emitter = new events.EventEmitter();
+
+	this.requestPipe.push({ request : req, emitter : emitter });
 	if (this.isConnected === false)
 		this.connect();
+
+	return emitter;
 };
 
 /**
@@ -55,7 +60,7 @@ HTTPConnection.prototype.request = function(req, cb) {
 HTTPConnection.prototype.connect = function() {
 	var self = this;
 
-	console.log('connecting to ', self.host, self.port);
+	// console.log('connecting to ', self.host, self.port);
 	self.sock = net.createConnection({ host : self.host, port : self.port }, function () {
 		self.performNextRequest();
 	});
@@ -101,8 +106,11 @@ HTTPConnection.prototype.performNextRequest = function() {
 		self.sock.write(req.request.toString());
 		self.currentRequest = req;
 		self.once('response', function (res) {
-			if (req.callback !== undefined)
-				req.callback(res);
+			res.request = req.request; // set the response's associated request
+
+			req.emitter.emit('response', res);
+
+			self.currentResponse = undefined;
 			self.currentRequest = undefined;
 			self.performNextRequest();
 		});
@@ -122,15 +130,13 @@ HTTPConnection.prototype.write = function(data) {
 };
 
 HTTPConnection.prototype.end = function() {
-	console.log("connection closed");
+	// console.log("connection closed");
 	this.isConnected = false;
 	if (this.currentRequest !== undefined) {
-		if (this.currentRequest.callback !== undefined) {
-			this.currentRequest.callback(new HTTPResponse('500', 'Socket Disconnected', 'HTTP/1.1'));
-		}
-		this.currentRequest = undefined;
+		this.emit('response', new HTTPResponse('500', 'Socket Disconnected', 'HTTP/1.1'));
+	} else {
+		this.emit('end');
 	}
-	this.performNextRequest();
 };
 
 module.exports = HTTPConnection;
