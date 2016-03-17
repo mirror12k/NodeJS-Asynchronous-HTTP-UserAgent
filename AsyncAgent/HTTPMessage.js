@@ -75,7 +75,10 @@ HTTPMessage.prototype.getMultiHeader = function(header) {
  * set the value of a header key, replacing any and all previous values
 */
 HTTPMessage.prototype.setHeader = function(header, val) {
-	this.headers[header.toLowerCase()] = [val];
+	if (val === undefined)
+		delete this.headers[header.toLowerCase()];
+	else
+		this.headers[header.toLowerCase()] = [val];
 };
 
 /**

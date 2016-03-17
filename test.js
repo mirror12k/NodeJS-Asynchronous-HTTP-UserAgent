@@ -44,3 +44,12 @@ test(new AsyncAgent.HTTPResponse().parse("HTTP/1.1 404 Not Found Ya\r\nasdf: qwe
 var obj = new AsyncAgent.HTTPResponse().parse("HTTP/1.1 404 Not Found Ya\r\n\r\n");
 obj.clone().code = '301';
 test(obj.code, '404');
+
+
+var ua = new AsyncAgent();
+ua.get('http://example.org/', function (res) {
+	console.log("got response: "+res);
+});
+ua.get('http://example.com/', function (res) {
+	console.log("got response: "+res);
+});
