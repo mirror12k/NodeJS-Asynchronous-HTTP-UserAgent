@@ -15,6 +15,8 @@ function AsyncAgent () {
 	this.connectors = {
 		'http:': AsyncAgent.HTTPConnection,
 	};
+	this.connectionsCache = {};
+
 }
 
 AsyncAgent.URL = require('./AsyncAgent/URL');
@@ -34,8 +36,10 @@ AsyncAgent.prototype.request = function (req, cb) {
 		req.setHeader('host', req.path.host);
 	if (req.getHeader('content-length') === undefined && req.body.length > 0)
 		req.setHeader('content-length', req.body.length);
+	if (req.getHeader('connection') === undefined)
+		req.setHeader('connection', 'Keep-Alive');
 
-	return new this.connectors[req.path.protocol]().request(req, cb);
+	this.getConnection(req.path.protocol, req.path.host, req.path.port).request(req, cb);
 };
 
 AsyncAgent.prototype.get = function (url, callback, headers, body) {
@@ -46,5 +50,16 @@ AsyncAgent.prototype.post = function (url, callback, headers, body) {
 	return this.request(new AsyncAgent.HTTPRequest('POST', url, 'HTTP/1.1', headers, body), callback);
 };
 
+
+AsyncAgent.prototype.getConnection = function(protocol, host, port) {
+	var connection;
+	if (this.connectionsCache[protocol+'//'+host+':'+port] !== undefined) {
+		connection = this.connectionsCache[protocol+'//'+host+':'+port];
+	} else {
+		connection = new this.connectors[protocol](host, port);
+		this.connectionsCache[protocol+'//'+host+':'+port] = connection;
+	}
+	return connection;
+};
 
 module.exports = AsyncAgent;

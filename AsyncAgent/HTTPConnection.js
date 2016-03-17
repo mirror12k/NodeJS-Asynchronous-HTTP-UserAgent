@@ -11,13 +11,17 @@ var HTTPResponse = require('./HTTPResponse');
 /**
  * creates a new un-connected HTTPConnection
  */
-function HTTPConnection () {
+function HTTPConnection (host, port) {
 	var self = this;
 	self.requestPipe = [];
 	self.isConnected = false;
 
 	self.currentResponse = undefined;
+	self.currentRequest = undefined;
 	self.buffer = '';
+
+	self.host = host;
+	self.port = port || 80;
 
 	self.on('header', function (res) {
 		if (res.getHeader('content-length') === undefined) {
@@ -40,7 +44,7 @@ HTTPConnection.prototype.request = function(req, cb) {
 	console.log("new request to url: " + req.path);
 	this.requestPipe.push({ request : req, callback : cb });
 	if (this.isConnected === false)
-		this.connect(req.path.host, req.path.port || 80);
+		this.connect();
 };
 
 /**
@@ -48,26 +52,16 @@ HTTPConnection.prototype.request = function(req, cb) {
  * sends a piped request if one is ready as soon as it is connected
  * this method is called automatically if a request is queued and the socket is not connected
  */
-HTTPConnection.prototype.connect = function(host, port) {
+HTTPConnection.prototype.connect = function() {
 	var self = this;
 
-	console.log('connecting to ', host, port);
-	self.sock = net.createConnection({host : host, port : port}, function () {
+	console.log('connecting to ', self.host, self.port);
+	self.sock = net.createConnection({ host : self.host, port : self.port }, function () {
 		self.performNextRequest();
 	});
 	self.isConnected = true;
 
-	self.sock.on('data', function (data) {
-		// console.log("got data: ", data);
-		self.buffer += data.toString('ascii');
-		// console.log("buffer: ", self.buffer);
-
-		if (self.currentResponse === undefined) {
-			self.checkHeaderReady();
-		} else {
-			self.checkBodyReady();
-		}
-	});
+	self.sock.pipe(this);
 };
 
 // checks if the buffer has a complete header ready
@@ -94,18 +88,49 @@ HTTPConnection.prototype.checkBodyReady = function() {
 // attempts to dequeue the next request and sends it through to socket
 HTTPConnection.prototype.performNextRequest = function() {
 	var self = this;
+
+	if (self.currentRequest !== undefined)
+		throw new Error("HTTPConnection.performNextRequest called before previous request has completed");
+
+	if (this.isConnected === false)
+		this.connect();
+
 	var req = self.requestPipe.shift();
 	if (req !== undefined) {
 		self.sock.ref(); // mark the socket as important
 		self.sock.write(req.request.toString());
+		self.currentRequest = req;
 		self.once('response', function (res) {
 			if (req.callback !== undefined)
 				req.callback(res);
+			self.currentRequest = undefined;
 			self.performNextRequest();
 		});
 	} else {
 		self.sock.unref(); // mark the socket as unused
 	}
+};
+
+HTTPConnection.prototype.write = function(data) {
+	this.buffer += data.toString('ascii');
+
+	if (this.currentResponse === undefined) {
+		this.checkHeaderReady();
+	} else {
+		this.checkBodyReady();
+	}
+};
+
+HTTPConnection.prototype.end = function() {
+	console.log("connection closed");
+	this.isConnected = false;
+	if (this.currentRequest !== undefined) {
+		if (this.currentRequest.callback !== undefined) {
+			this.currentRequest.callback(new HTTPResponse('500', 'Socket Disconnected', 'HTTP/1.1'));
+		}
+		this.currentRequest = undefined;
+	}
+	this.performNextRequest();
 };
 
 module.exports = HTTPConnection;
