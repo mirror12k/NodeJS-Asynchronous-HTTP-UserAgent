@@ -44,10 +44,15 @@ HTTPConnection.prototype = Object.create(events.EventEmitter.prototype);
  */
 HTTPConnection.prototype.request = function(req) {
 	var emitter = new events.EventEmitter();
+	var context = { request : req, emitter : emitter };
 
-	this.requestPipe.push({ request : req, emitter : emitter });
+	this.requestPipe.push(context);
 	if (this.isConnected === false)
 		this.connect();
+	else if (this.currentRequest === undefined && this.requestPipe.length === 1)
+		this.performNextRequest();
+
+	this.emit('request', context);
 
 	return emitter;
 };
@@ -90,6 +95,14 @@ HTTPConnection.prototype.checkBodyReady = function() {
 	}
 };
 
+HTTPConnection.prototype.markNeeded = function() {
+	this.sock.ref(); // mark the socket as important
+};
+
+HTTPConnection.prototype.markUnneeded = function() {
+	this.sock.unref(); // mark the socket as unneeded
+};
+
 // attempts to dequeue the next request and sends it through to socket
 HTTPConnection.prototype.performNextRequest = function() {
 	var self = this;
@@ -102,8 +115,9 @@ HTTPConnection.prototype.performNextRequest = function() {
 
 	var req = self.requestPipe.shift();
 	if (req !== undefined) {
-		self.sock.ref(); // mark the socket as important
+		self.markNeeded();
 		self.sock.write(req.request.toString());
+
 		self.currentRequest = req;
 		self.once('response', function (res) {
 			res.request = req.request; // set the response's associated request
@@ -115,7 +129,7 @@ HTTPConnection.prototype.performNextRequest = function() {
 			self.performNextRequest();
 		});
 	} else {
-		self.sock.unref(); // mark the socket as unused
+		self.markUnneeded();
 	}
 };
 
@@ -130,7 +144,7 @@ HTTPConnection.prototype.write = function(data) {
 };
 
 HTTPConnection.prototype.end = function() {
-	// console.log("connection closed");
+	console.log("connection closed");
 	this.isConnected = false;
 	if (this.currentRequest !== undefined) {
 		this.emit('response', new HTTPResponse('500', 'Socket Disconnected', 'HTTP/1.1'));

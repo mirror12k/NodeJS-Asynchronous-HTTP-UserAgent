@@ -11,12 +11,11 @@
 
 
 function AsyncAgent () {
-	this.history = [];
 	this.connectors = {
 		'http:': AsyncAgent.HTTPConnection,
+		'https:': AsyncAgent.HTTPSConnection,
 	};
 	this.connectionsCache = {};
-
 }
 
 AsyncAgent.URL = require('./AsyncAgent/URL');
@@ -25,6 +24,7 @@ AsyncAgent.HTTPRequest = require('./AsyncAgent/HTTPRequest');
 AsyncAgent.HTTPResponse = require('./AsyncAgent/HTTPResponse');
 AsyncAgent.HTTPError = require('./AsyncAgent/HTTPError');
 AsyncAgent.HTTPConnection = require('./AsyncAgent/HTTPConnection');
+AsyncAgent.HTTPSConnection = require('./AsyncAgent/HTTPSConnection');
 
 AsyncAgent.prototype.request = function (request, options) {
 	options = options || {};
