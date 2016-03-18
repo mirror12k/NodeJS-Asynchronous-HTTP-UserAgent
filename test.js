@@ -78,3 +78,8 @@ setTimeout(function() {
 // });
 
 
+// var jar = new AsyncAgent.CookieJar().fromFileSync('jar.cookies');
+
+// jar.setCookies('http://localhost:undefined', { c: 'd' });
+// console.log('jar:', jar);
+// jar.toFileSync('jar.cookies');
