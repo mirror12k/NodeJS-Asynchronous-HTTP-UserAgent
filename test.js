@@ -83,3 +83,16 @@ setTimeout(function() {
 // jar.setCookies('http://localhost:undefined', { c: 'd' });
 // console.log('jar:', jar);
 // jar.toFileSync('jar.cookies');
+
+
+
+// var ua = new AsyncAgent();
+// ua.get('https://www.yahoo.com/', { chunked: true }).once('header', function (res) {
+// 	console.log("got header: "+res);
+// }).once('response', function (res) {
+// 	console.log("got response: "+res);
+// }).on('data', function (data) {
+// 	console.log("got chunk: ");
+// }).once('end', function () {
+// 	console.log("got end");
+// });

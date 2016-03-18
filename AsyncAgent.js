@@ -9,9 +9,10 @@ var events = require('events');
 
 /* TODO:
  * request/response history
- * storable cookies
+ * proper HEAD requests
  * chunked transfer
  * to file loading
+ * transfer-encoding: chunked
  * file parsing (title parsing, link listing, form listing, form submittion)
  */
 
@@ -42,11 +43,11 @@ function AsyncAgent (options) {
 
 
 	this.allowedProtocols = options.allowedProtocols || [ 'http:', 'https:', 'test_reflect:', ];
-	this.allowedCompression = options.allowedCompression || [ 'gzip', 'deflate' ];
+	this.allowedCompression = options.allowedCompression || [ 'gzip', 'deflate' ]; //
 
 	this.compressors = {
-		'gzip': { compress: zlib.gzip, decompress: zlib.gunzip },
-		'deflate': { compress: zlib.deflate, decompress: zlib.inflate },
+		'gzip': { compress: zlib.gzip, decompress: zlib.gunzip, streamDecompressor: zlib.createGunzip },
+		'deflate': { compress: zlib.deflate, decompress: zlib.inflate, streamDecompressor: zlib.createInflate },
 	};
 	this.connectors = {
 		'http:': AsyncAgent.HTTPConnection,
@@ -78,13 +79,14 @@ AsyncAgent.CookieJar = require('./AsyncAgent/CookieJar');
  * - callback - optional callback which will be called when the request is completed
  */
 AsyncAgent.prototype.request = function (request, options) {
+	var self = this;
 	options = options || {};
 
 	// prepare the request
 	request = this.prepareRequest(request, options);
 
 	// get the connection and request from it, and get the response emitter
-	var res = this.getConnection(request.path.protocol, request.path.host, request.path.port).request(request);
+	var res = this.getConnection(request.path.protocol, request.path.host, request.path.port).request(request, { chunked: options.chunked });
 	var emitter = new events.EventEmitter();
 
 	// set some hooks
@@ -92,8 +94,26 @@ AsyncAgent.prototype.request = function (request, options) {
 		res.once('response', this.setCookiesFromResponse.bind(this, request.path.protocol+'//'+request.path.host+':'+request.path.port));
 	if (options.callback !== undefined)
 		res.once('response', options.callback);
-	res.once('header', emitter.emit.bind(emitter, 'header'));
-	res.once('response', this.parseResponse.bind(this, emitter, request));
+	// res.once('header', emitter.emit.bind(emitter, 'header'));
+	res.once('header', function (response) {
+		emitter.emit('header', response);
+		var compression = response.getHeader('content-encoding');
+		if (compression !== undefined && options.chunked) {
+			if (self.compressors[compression] === undefined)
+				throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
+			var streamDecompressor = self.compressors[compression].streamDecompressor();
+			streamDecompressor.on('data', emitter.emit.bind(emitter, 'data'));
+			streamDecompressor.on('end', emitter.emit.bind(emitter, 'end'));
+			res.on('data', streamDecompressor.write.bind(streamDecompressor));
+			res.once('response', function () { streamDecompressor.end(); });
+		} else if (options.chunked) {
+			res.on('data', emitter.emit.bind(emitter, 'data'));
+			res.on('response', emitter.emit.bind(emitter, 'end'));
+		}
+	});
+	
+	res.on('error', emitter.emit.bind(emitter, 'error'));
+	res.once('response', this.parseResponse.bind(this, emitter, options, request));
 
 	return emitter;
 };
@@ -149,11 +169,11 @@ AsyncAgent.prototype.prepareRequest = function(request, options) {
 	return request;
 };
 
-AsyncAgent.prototype.parseResponse = function(emitter, request, response) {
+AsyncAgent.prototype.parseResponse = function(emitter, options, request, response) {
 	response.request = request;
 
 	var compression = response.getHeader('content-encoding');
-	if (compression !== undefined) {
+	if (compression !== undefined && ! options.chunked) {
 		if (this.compressors[compression] === undefined)
 			throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
 		else
@@ -211,29 +231,6 @@ AsyncAgent.prototype.getConnection = function(protocol, host, port) {
 	}
 	return connection;
 };
-
-// /**
-//  * get a dictionary of cookies for a given authority
-//  */
-// AsyncAgent.prototype.getCookies = function(authority) {
-// 	if (this.cookieStorage !== undefined)
-// 		return this.cookieStorage[authority];
-// };
-
-// /**
-//  * sets the cookies in the given dictionary for a given authority
-//  */
-// AsyncAgent.prototype.setCookies = function(authority, cookies) {
-// 	var self = this;
-// 	if (self.cookieStorage !== undefined) {
-// 		console.log("setting cookies: ", cookies);
-// 		if (self.cookieStorage[authority] === undefined)
-// 			self.cookieStorage[authority] = {};
-// 		Object.keys(cookies).forEach(function (key) {
-// 			self.cookieStorage[authority][key] = cookies[key];
-// 		});
-// 	}
-// };
 
 /**
  * extracts any 'Set-Cookie' headers in the given response, parses them, and passes the cookies to setCookies

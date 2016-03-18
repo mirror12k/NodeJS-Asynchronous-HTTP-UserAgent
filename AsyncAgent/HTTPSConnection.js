@@ -1,5 +1,5 @@
 /**
- * a Connection class for connecting to servers via the HTTPS protocol
+ * a Connection class extending HTTPConection for connecting to servers via the HTTPS protocol
  */
 
 

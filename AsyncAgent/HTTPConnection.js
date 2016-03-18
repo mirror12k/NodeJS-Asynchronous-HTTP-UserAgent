@@ -40,11 +40,11 @@ HTTPConnection.prototype = Object.create(events.EventEmitter.prototype);
 
 /**
  * queues an http request to sent to the webserver
- * the optional callback is called with the http response when it is complete
  */
-HTTPConnection.prototype.request = function(req) {
+HTTPConnection.prototype.request = function(req, options) {
+	options = options || {};
 	var emitter = new events.EventEmitter();
-	var context = { request : req, emitter : emitter };
+	var context = { request : req, emitter : emitter, chunked: options.chunked, read: 0 };
 
 	this.requestPipe.push(context);
 	if (this.isConnected === false)
@@ -87,13 +87,29 @@ HTTPConnection.prototype.checkHeaderReady = function() {
 // checks if the buffer has the complete body ready
 HTTPConnection.prototype.checkBodyReady = function() {
 	var length = this.currentResponse.getHeader('content-length');
-	if (this.buffer.length >= length) {
-		var body = this.buffer.slice(0, length);
-		this.buffer = this.buffer.slice(length);
-		var res = this.currentResponse;
-		this.currentResponse = undefined;
-		res.body = body;
-		this.emit('response', res);
+	if (this.currentRequest.chunked) {
+		if (this.buffer.length + this.currentRequest.read >= length) {
+			var cutlength = length - this.currentRequest.read;
+			if (cutlength > 0)
+				this.currentRequest.emitter.emit('data', this.buffer.slice(0, cutlength));
+			this.buffer = this.buffer.slice(cutlength);
+
+			this.emit('response', this.currentResponse);
+		} else {
+			if (this.buffer.length > 0) {
+				this.currentRequest.emitter.emit('data', this.buffer);
+				this.currentRequest.read += this.buffer.length;
+				this.buffer = new Buffer(0);
+			}
+		}
+	} else {
+		if (this.buffer.length >= length) {
+			var body = this.buffer.slice(0, length);
+			this.buffer = this.buffer.slice(length);
+			var res = this.currentResponse;
+			res.body = body;
+			this.emit('response', res);
+		}
 	}
 };
 
