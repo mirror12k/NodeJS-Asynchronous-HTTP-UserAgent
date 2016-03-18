@@ -42,7 +42,7 @@ URL.prototype.parse = function (text) {
 	return this;
 };
 
-function mergePath (path, other) {
+URL.mergePath = function (path, other) {
 	if (other[0] == '/')
 		return other;
 
@@ -81,7 +81,7 @@ URL.prototype.base = function (other) {
 	if (this.path === undefined)
 		this.path = other.path;
 	else if (this.path !== undefined && other.path !== undefined)
-		this.path = mergePath(other.path, this.path);
+		this.path = URL.mergePath(other.path, this.path);
 
 	if (this.query === undefined)
 		this.query = other.query;
@@ -123,6 +123,18 @@ URL.prototype.toString = function() {
 	s += this.stringPath();
 	return s;
 };
+
+
+
+URL.urlencode = function (text) {
+	return text.split('').map(function (c) {
+		if (/[A-Za-z0-9\-_\.~]/.test(c)) {
+			return c;
+		} else {
+			return '%' + c.charCodeAt(0).toString(16);
+		}
+	}).join('');
+}
 
 
 module.exports = URL;

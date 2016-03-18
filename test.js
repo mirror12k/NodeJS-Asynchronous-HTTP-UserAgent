@@ -69,4 +69,8 @@ setTimeout(function() {
 // 	});
 // });
 
+// ua.get('test_reflect://localhost/', { body: { a:'b', test:'#%^&*(-_.~' } }).once('response', function (res) {
+// 	console.log("reflected response:" + res);
+// });
+
 

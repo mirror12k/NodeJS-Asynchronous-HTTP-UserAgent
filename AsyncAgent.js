@@ -2,12 +2,15 @@
 
 
 /* TODO:
- * basic requesting
  * request/response history
- * connection caching
+ * post object serialization
+ * transparent compression
+ * chunked transfer
+ * to file loading
+ * file parsing (title parsing, link listing, form listing, form submittion)
 */
 
-
+// 
 
 
 function AsyncAgent (options) {
@@ -44,16 +47,6 @@ AsyncAgent.prototype.request = function (request, options) {
 	if (request.path.protocol === undefined)
 		throw new Error("unable to request without a protocol in url '"+request.path+"'");
 
-	// set some default headers
-	if (request.getHeader('host') === undefined)
-		request.setHeader('host', request.path.host);
-	if (request.getHeader('content-length') === undefined && request.body.length > 0)
-		request.setHeader('content-length', request.body.length);
-	if (request.getHeader('connection') === undefined)
-		request.setHeader('connection', 'Keep-Alive');
-	if (request.getHeader('user-agent') === undefined && this.useragent !== undefined)
-		request.setHeader('user-agent', this.useragent);
-
 	if (options.nocookies === undefined) {
 		var cookies = this.getCookies(authority);
 		if (cookies !== undefined && Object.keys(cookies).length > 0) {
@@ -63,6 +56,24 @@ AsyncAgent.prototype.request = function (request, options) {
 			request.setHeader('cookie', cookies);
 		}
 	}
+
+	if ('string' !== typeof request.body) {
+		request.body = Object.keys(request.body).map(function (key) {
+			return AsyncAgent.URL.urlencode(key)+"="+AsyncAgent.URL.urlencode(request.body[key]);
+		}).join("&");
+		if (request.getHeader('content-type') === undefined)
+			request.setHeader('content-type', 'application/x-www-form-urlencoded');
+	}
+
+	// set some default headers
+	if (request.getHeader('host') === undefined)
+		request.setHeader('host', request.path.host);
+	if (request.getHeader('content-length') === undefined && request.body.length > 0)
+		request.setHeader('content-length', request.body.length);
+	if (request.getHeader('connection') === undefined)
+		request.setHeader('connection', 'Keep-Alive');
+	if (request.getHeader('user-agent') === undefined && this.useragent !== undefined)
+		request.setHeader('user-agent', this.useragent);
 
 	// get the connection and request from it, and get the response emitter
 	var res = this.getConnection(request.path.protocol, request.path.host, request.path.port).request(request);
