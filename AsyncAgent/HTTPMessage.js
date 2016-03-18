@@ -8,6 +8,10 @@
 /**
  * creates a new HTTPMessage object
  * all arguments optional
+ * protocol can be a protocol string
+ * headers can be an object defining header key-value pairs
+ * header values can be a single string or an array of strings
+ * body can be a string which will be used as the message body
 */
 function HTTPMessage (protocol, headers, body) {
 	var self = this;
@@ -19,7 +23,11 @@ function HTTPMessage (protocol, headers, body) {
 	self.headers = {};
 	if (headers !== undefined)
 		Object.keys(headers).forEach(function (key) {
-			self.headers[key] = headers[key].slice(0);
+			if ('string' === typeof headers[key]) {
+				self.headers[key] = [ headers[key] ];
+			} else {
+				self.headers[key] = headers[key].slice(0);
+			}
 		});
 
 	if (body !== undefined)

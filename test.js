@@ -62,7 +62,7 @@ setTimeout(function() {
 
 
 // var ua = new AsyncAgent({ cookies: {} });
-// ua.get('test_reflect://localhost/', { headers: { 'set-cookie': ["a=b; test=qwerty"] } }).once('response', function (res) {
+// ua.get('test_reflect://localhost/', { headers: { 'set-cookie': "a=b; test=qwerty" } }).once('response', function (res) {
 // 	console.log("reflected response: "+ res);
 // 	ua.get('test_reflect://localhost/').once('response', function (res) {
 // 		console.log("reflected response: "+ res);

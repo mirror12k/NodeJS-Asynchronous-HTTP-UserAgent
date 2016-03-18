@@ -42,6 +42,9 @@ URL.prototype.parse = function (text) {
 	return this;
 };
 
+/**
+ * merges two urls using path as the inital url, and the other as the relative url being created from the initial
+ */
 URL.mergePath = function (path, other) {
 	if (other[0] == '/')
 		return other;
@@ -125,7 +128,9 @@ URL.prototype.toString = function() {
 };
 
 
-
+/**
+ * performs url encoding, percent encoding anything besides alphanumeric and '-_.~'
+ */
 URL.urlencode = function (text) {
 	return text.split('').map(function (c) {
 		if (/[A-Za-z0-9\-_\.~]/.test(c)) {

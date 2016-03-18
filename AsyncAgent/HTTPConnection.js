@@ -133,6 +133,7 @@ HTTPConnection.prototype.performNextRequest = function() {
 	}
 };
 
+// implemented in order to be pipable
 HTTPConnection.prototype.write = function(data) {
 	this.buffer += data.toString('ascii');
 
@@ -143,6 +144,7 @@ HTTPConnection.prototype.write = function(data) {
 	}
 };
 
+// implemented in order to be pipable
 HTTPConnection.prototype.end = function() {
 	// console.log("connection closed");
 	this.isConnected = false;
