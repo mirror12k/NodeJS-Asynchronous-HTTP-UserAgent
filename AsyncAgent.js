@@ -36,6 +36,8 @@ AsyncAgent.TestReflectConnection = require('./AsyncAgent/TestReflectConnection')
 AsyncAgent.prototype.request = function (request, options) {
 	options = options || {};
 
+	var authority = request.path.protocol+'//'+request.path.host+':'+request.path.port;
+
 	// verify that the path is valid
 	if (request.path.host === undefined)
 		throw new Error("unable to request without a host in url '"+request.path+"'");
@@ -53,7 +55,7 @@ AsyncAgent.prototype.request = function (request, options) {
 		request.setHeader('user-agent', this.useragent);
 
 	if (options.nocookies === undefined) {
-		var cookies = this.getCookies(request.path.protocol, request.path.host, request.path.port);
+		var cookies = this.getCookies(authority);
 		if (cookies !== undefined && Object.keys(cookies).length > 0) {
 			cookies = Object.keys(cookies).map(function (key) {
 				return key+"="+cookies[key]+";";
@@ -64,7 +66,7 @@ AsyncAgent.prototype.request = function (request, options) {
 
 	// get the connection and request from it, and get the response emitter
 	var res = this.getConnection(request.path.protocol, request.path.host, request.path.port).request(request);
-	res.once('response', this.setCookiesFromResponse.bind(this, request.path.protocol, request.path.host, request.path.port));
+	res.once('response', this.setCookiesFromResponse.bind(this, authority));
 	return res;
 };
 
@@ -81,30 +83,28 @@ AsyncAgent.prototype.post = function (url, options) {
 
 AsyncAgent.prototype.getConnection = function(protocol, host, port) {
 	var self = this;
+	var authority = protocol+'//'+host+':'+port;
 	var connection;
-	if (this.connectionsCache[protocol+'//'+host+':'+port] !== undefined) {
-		connection = this.connectionsCache[protocol+'//'+host+':'+port];
+	if (this.connectionsCache[authority] !== undefined) {
+		connection = this.connectionsCache[authority];
 	} else {
 		connection = new this.connectors[protocol](host, port);
 		connection.once('end', function () {
-			console.log('removed connection from cache:', protocol+'//'+host+':'+port);
-			self.connectionsCache[protocol+'//'+host+':'+port] = undefined;
+			// console.log('removed connection from cache:', authority);
+			self.connectionsCache[authority] = undefined;
 		});
-		this.connectionsCache[protocol+'//'+host+':'+port] = connection;
+		this.connectionsCache[authority] = connection;
 	}
 	return connection;
 };
 
-AsyncAgent.prototype.getCookies = function(protocol, host, port) {
-	if (this.cookieStorage === undefined)
-		return undefined;
-	else
-		return this.cookieStorage[protocol+'//'+host+':'+port];
+AsyncAgent.prototype.getCookies = function(authority) {
+	if (this.cookieStorage !== undefined)
+		return this.cookieStorage[authority];
 };
 
-AsyncAgent.prototype.setCookies = function(protocol, host, port, cookies) {
+AsyncAgent.prototype.setCookies = function(authority, cookies) {
 	var self = this;
-	var authority = protocol+'//'+host+':'+port;
 	if (self.cookieStorage !== undefined) {
 		console.log("setting cookies: ", cookies);
 		if (self.cookieStorage[authority] === undefined)
@@ -115,7 +115,7 @@ AsyncAgent.prototype.setCookies = function(protocol, host, port, cookies) {
 	}
 };
 
-AsyncAgent.prototype.setCookiesFromResponse = function(protocol, host, port, res) {
+AsyncAgent.prototype.setCookiesFromResponse = function(authority, res) {
 	var cookieHeaders = res.getMultiHeader('set-cookie');
 	if (cookieHeaders !== undefined) {
 		for (var i = 0; i < cookieHeaders.length; i++) {
@@ -125,7 +125,7 @@ AsyncAgent.prototype.setCookiesFromResponse = function(protocol, host, port, res
 				var val = cookie.substring(key.length + 1);
 				cookies[key.trim()] = val.trim();
 			});
-			this.setCookies(protocol, host, port, cookies);
+			this.setCookies(authority, cookies);
 		}
 	}
 };
