@@ -62,11 +62,14 @@ setTimeout(function() {
 }, 2000);
 
 
-// var ua = new AsyncAgent({ cookies: {} });
+// var ua = new AsyncAgent({ cookies: true });
 // ua.get('test_reflect://localhost/', { headers: { 'set-cookie': "a=b; test=qwerty" } }).once('response', function (res) {
 // 	console.log("reflected response: "+ res);
-// 	ua.get('test_reflect://localhost/').once('response', function (res) {
+// 	ua.get('test_reflect://localhost/', { headers: { 'set-cookie': [ 'b=c', "test=asdf"] } }).once('response', function (res) {
 // 		console.log("reflected response: "+ res);
+// 		ua.get('test_reflect://localhost/').once('response', function (res) {
+// 			console.log("reflected response: "+ res);
+// 		});
 // 	});
 // });
 

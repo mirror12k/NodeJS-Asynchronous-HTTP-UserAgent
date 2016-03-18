@@ -9,7 +9,6 @@ var events = require('events');
 
 /* TODO:
  * request/response history
- * transparent compression
  * storable cookies
  * chunked transfer
  * to file loading
@@ -29,11 +28,20 @@ var events = require('events');
 function AsyncAgent (options) {
 	options = options || {};
 
-	this.cookieStorage = options.cookies;
+	if (options.cookies !== undefined) {
+		if (options.cookies === true) {
+			this.cookieStorage = new AsyncAgent.CookieJar();
+		} else {
+			this.cookieStorage = new AsyncAgent.CookieJar(options.cookies);
+		}
+	}
+	if (options.cookieStorage !== undefined)
+		this.cookieStorage = options.cookieStorage;
+	
 	this.useragent = options.useragent;
 
 
-	this.allowedProtocols = options.allowedProtocols || [ 'http:', 'https:', ];
+	this.allowedProtocols = options.allowedProtocols || [ 'http:', 'https:', 'test_reflect:', ];
 	this.allowedCompression = options.allowedCompression || [ 'gzip', 'deflate' ];
 
 	this.compressors = {
@@ -43,7 +51,7 @@ function AsyncAgent (options) {
 	this.connectors = {
 		'http:': AsyncAgent.HTTPConnection,
 		'https:': AsyncAgent.HTTPSConnection,
-		// 'test_reflect:': AsyncAgent.TestReflectConnection,
+		'test_reflect:': AsyncAgent.TestReflectConnection,
 	};
 
 	this.connectionsCache = {};
@@ -57,6 +65,7 @@ AsyncAgent.HTTPError = require('./AsyncAgent/HTTPError');
 AsyncAgent.HTTPConnection = require('./AsyncAgent/HTTPConnection');
 AsyncAgent.HTTPSConnection = require('./AsyncAgent/HTTPSConnection');
 AsyncAgent.TestReflectConnection = require('./AsyncAgent/TestReflectConnection');
+AsyncAgent.CookieJar = require('./AsyncAgent/CookieJar');
 
 /**
  * performs a specific HTTPRequest object
@@ -104,13 +113,13 @@ AsyncAgent.prototype.prepareRequest = function(request, options) {
 	if (this.allowedProtocols.indexOf(request.path.protocol) === -1)
 		throw new AsyncAgent.HTTPError("protocol not allowed '"+request.path.protocol+"'");
 
-	if (options.nocookies === undefined) {
+	if (options.nocookies === undefined && this.cookieStorage !== undefined) {
 		// set the cookies for this request
-		var cookies = this.getCookies(authority);
+		var cookies = this.cookieStorage.getCookies(authority);
 		if (cookies !== undefined && Object.keys(cookies).length > 0) {
 			cookies = Object.keys(cookies).map(function (key) {
-				return key+"="+cookies[key]+";";
-			}).join(" ");
+				return key+"="+cookies[key];
+			}).join("; ");
 			request.setHeader('cookie', cookies);
 		}
 	}
@@ -203,28 +212,28 @@ AsyncAgent.prototype.getConnection = function(protocol, host, port) {
 	return connection;
 };
 
-/**
- * get a dictionary of cookies for a given authority
- */
-AsyncAgent.prototype.getCookies = function(authority) {
-	if (this.cookieStorage !== undefined)
-		return this.cookieStorage[authority];
-};
+// /**
+//  * get a dictionary of cookies for a given authority
+//  */
+// AsyncAgent.prototype.getCookies = function(authority) {
+// 	if (this.cookieStorage !== undefined)
+// 		return this.cookieStorage[authority];
+// };
 
-/**
- * sets the cookies in the given dictionary for a given authority
- */
-AsyncAgent.prototype.setCookies = function(authority, cookies) {
-	var self = this;
-	if (self.cookieStorage !== undefined) {
-		console.log("setting cookies: ", cookies);
-		if (self.cookieStorage[authority] === undefined)
-			self.cookieStorage[authority] = {};
-		Object.keys(cookies).forEach(function (key) {
-			self.cookieStorage[authority][key] = cookies[key];
-		});
-	}
-};
+// /**
+//  * sets the cookies in the given dictionary for a given authority
+//  */
+// AsyncAgent.prototype.setCookies = function(authority, cookies) {
+// 	var self = this;
+// 	if (self.cookieStorage !== undefined) {
+// 		console.log("setting cookies: ", cookies);
+// 		if (self.cookieStorage[authority] === undefined)
+// 			self.cookieStorage[authority] = {};
+// 		Object.keys(cookies).forEach(function (key) {
+// 			self.cookieStorage[authority][key] = cookies[key];
+// 		});
+// 	}
+// };
 
 /**
  * extracts any 'Set-Cookie' headers in the given response, parses them, and passes the cookies to setCookies
@@ -239,7 +248,7 @@ AsyncAgent.prototype.setCookiesFromResponse = function(authority, res) {
 				var val = cookie.substring(key.length + 1);
 				cookies[key.trim()] = val.trim();
 			});
-			this.setCookies(authority, cookies);
+			this.cookieStorage.setCookies(authority, cookies);
 		}
 	}
 };
