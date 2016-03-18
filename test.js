@@ -48,15 +48,16 @@ test(obj.code, '404');
 
 var ua = new AsyncAgent();
 ua.get('https://example.org/').once('response', function (res) {
-	console.log("got response: "+res.code);
+	console.log("got response: "+res);
 });
 ua.get('https://example.org/').once('response', function (res) {
-	console.log("got response: "+res.code);
+	console.log("got response: "+res);
 });
 
 setTimeout(function() {
+	console.log("requested");
 	ua.get('https://example.org/').once('response', function (res) {
-		console.log("got response: "+res.code);
+		console.log("got response: "+res);
 	});
 }, 2000);
 

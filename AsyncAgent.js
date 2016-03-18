@@ -4,9 +4,13 @@
  */
 
 
+var zlib = require('zlib');
+var events = require('events');
+
 /* TODO:
  * request/response history
  * transparent compression
+ * storable cookies
  * chunked transfer
  * to file loading
  * file parsing (title parsing, link listing, form listing, form submittion)
@@ -23,15 +27,24 @@
 function AsyncAgent (options) {
 	options = options || {};
 
+	this.cookieStorage = options.cookies;
+	this.useragent = options.useragent;
+
+
+	this.allowedProtocols = options.allowedProtocols || [ 'http:', 'https:', ];
+	this.allowedCompression = options.allowedCompression || [ 'gzip', 'deflate' ];
+
+	this.compressors = {
+		'gzip': { compress: zlib.gzip, decompress: zlib.gunzip },
+		'deflate': { compress: zlib.deflate, decompress: zlib.inflate },
+	};
 	this.connectors = {
 		'http:': AsyncAgent.HTTPConnection,
 		'https:': AsyncAgent.HTTPSConnection,
 		// 'test_reflect:': AsyncAgent.TestReflectConnection,
 	};
-	this.connectionsCache = {};
 
-	this.cookieStorage = options.cookies;
-	this.useragent = options.useragent;
+	this.connectionsCache = {};
 }
 
 AsyncAgent.URL = require('./AsyncAgent/URL');
@@ -61,14 +74,17 @@ AsyncAgent.prototype.request = function (request, options) {
 
 	// get the connection and request from it, and get the response emitter
 	var res = this.getConnection(request.path.protocol, request.path.host, request.path.port).request(request);
+	var emitter = new events.EventEmitter();
 
 	// set some hooks
 	if (this.cookieStorage !== undefined && options.nocookies === undefined)
 		res.once('response', this.setCookiesFromResponse.bind(this, request.path.protocol+'//'+request.path.host+':'+request.path.port));
 	if (options.callback !== undefined)
 		res.once('response', options.callback);
+	res.once('header', emitter.emit.bind(emitter, 'header'));
+	res.once('response', this.parseResponse.bind(this, emitter, request));
 
-	return res;
+	return emitter;
 };
 
 /**
@@ -80,9 +96,11 @@ AsyncAgent.prototype.prepareRequest = function(request, options) {
 
 	// verify that the path is valid
 	if (request.path.host === undefined)
-		throw new Error("unable to request without a host in url '"+request.path+"'");
+		throw new AsyncAgent.HTTPError("unable to request without a host in url '"+request.path+"'");
 	if (request.path.protocol === undefined)
-		throw new Error("unable to request without a protocol in url '"+request.path+"'");
+		throw new AsyncAgent.HTTPError("unable to request without a protocol in url '"+request.path+"'");
+	if (this.allowedProtocols.indexOf(request.path.protocol) === -1)
+		throw new AsyncAgent.HTTPError("protocol not allowed '"+request.path.protocol+"'");
 
 	if (options.nocookies === undefined) {
 		// set the cookies for this request
@@ -114,7 +132,31 @@ AsyncAgent.prototype.prepareRequest = function(request, options) {
 	if (request.getHeader('user-agent') === undefined && this.useragent !== undefined)
 		request.setHeader('user-agent', this.useragent);
 
+	if (request.getHeader('accept-encoding') === undefined && this.allowedCompression.length > 0)
+		request.setHeader('accept-encoding', this.allowedCompression.join(', '));
+
 	return request;
+};
+
+AsyncAgent.prototype.parseResponse = function(emitter, request, response) {
+	response.request = request;
+
+	var compression = response.getHeader('content-encoding');
+	if (compression !== undefined) {
+		if (this.compressors[compression] === undefined)
+			throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
+		else
+			this.compressors[compression].decompress(new Buffer(response.body, 'binary'), function (error, buffer) {
+				if (error === undefined || error === null) {
+					response.body = buffer.toString('ascii');
+					emitter.emit('response', response);
+				} else {
+					emitter.emit('error', error);
+				}
+			});
+	} else {
+		emitter.emit('response', response);
+	}
 };
 
 /**

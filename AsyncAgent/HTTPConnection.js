@@ -120,8 +120,6 @@ HTTPConnection.prototype.performNextRequest = function() {
 
 		self.currentRequest = req;
 		self.once('response', function (res) {
-			res.request = req.request; // set the response's associated request
-
 			req.emitter.emit('response', res);
 
 			self.currentResponse = undefined;
@@ -135,7 +133,7 @@ HTTPConnection.prototype.performNextRequest = function() {
 
 // implemented in order to be pipable
 HTTPConnection.prototype.write = function(data) {
-	this.buffer += data.toString('ascii');
+	this.buffer += data.toString('binary');
 
 	if (this.currentResponse === undefined) {
 		this.checkHeaderReady();
