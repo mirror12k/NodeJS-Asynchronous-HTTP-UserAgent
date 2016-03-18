@@ -19,16 +19,6 @@ function HTTPSConnection (host, port) {
 
 HTTPSConnection.prototype = Object.create(HTTPConnection.prototype);
 
-
-// using undocumented access to the underlying socket just to get the ref() and unref() methods
-HTTPSConnection.prototype.markNeeded = function() {
-	this.sock.socket.ref(); // mark the socket as important
-};
-
-HTTPSConnection.prototype.markUnneeded = function() {
-	this.sock.socket.unref(); // mark the socket as unneeded
-};
-
 /**
  * connects the HTTPSConnection to the given host and port address
  * sends a piped request if one is ready as soon as it is connected
