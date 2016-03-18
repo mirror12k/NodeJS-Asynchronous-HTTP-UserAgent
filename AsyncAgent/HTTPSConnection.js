@@ -1,5 +1,5 @@
 /**
- * a Connection class for connecting to servers via the HTTP protocol
+ * a Connection class for connecting to servers via the HTTPS protocol
  */
 
 
@@ -37,7 +37,7 @@ HTTPSConnection.prototype.markUnneeded = function() {
 HTTPSConnection.prototype.connect = function() {
 	var self = this;
 
-	console.log('connecting tls to', self.host, self.port);
+	// console.log('connecting tls to', self.host, self.port);
 	self.sock = tls.connect({ host : self.host, port : self.port }, function () {
 		self.performNextRequest();
 	});

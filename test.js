@@ -38,8 +38,8 @@ test(new AsyncAgent.HTTPRequest().parse("GET /asdf?qwerty#frag HTTP/1.1\r\nheade
 test(new AsyncAgent.HTTPResponse('200', 'OK', "HTTP/1.1", { asdf : ['qwerty']}, "hahaha").toString(),
 	"HTTP/1.1 200 OK\r\nasdf: qwerty\r\n\r\nhahaha");
 
-test(new AsyncAgent.HTTPResponse().parse("HTTP/1.1 404 Not Found Ya\r\nasdf: qwerty\r\n\r\nhahaha").toString(),
-	"HTTP/1.1 404 Not Found Ya\r\nasdf: qwerty\r\n\r\nhahaha");
+test(new AsyncAgent.HTTPResponse().parse("HTTP/1.1 404 Not Found Ya\r\nasdf: qwerty\r\ntest: fun\r\n\r\nhahaha").toString(),
+	"HTTP/1.1 404 Not Found Ya\r\nasdf: qwerty\r\ntest: fun\r\n\r\nhahaha");
 
 var obj = new AsyncAgent.HTTPResponse().parse("HTTP/1.1 404 Not Found Ya\r\n\r\n");
 obj.clone().code = '301';
@@ -59,3 +59,14 @@ setTimeout(function() {
 		console.log("got response: "+res.code);
 	});
 }, 2000);
+
+var ua = new AsyncAgent({ cookies: {} });
+
+// ua.get('test_reflect://localhost/', { headers: { 'set-cookie': ["a=b; test=qwerty"] } }).once('response', function (res) {
+// 	console.log("reflected response: "+ res);
+// 	ua.get('test_reflect://localhost/').once('response', function (res) {
+// 		console.log("reflected response: "+ res);
+// 	});
+// });
+
+

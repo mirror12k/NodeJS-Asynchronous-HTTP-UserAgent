@@ -144,7 +144,7 @@ HTTPConnection.prototype.write = function(data) {
 };
 
 HTTPConnection.prototype.end = function() {
-	console.log("connection closed");
+	// console.log("connection closed");
 	this.isConnected = false;
 	if (this.currentRequest !== undefined) {
 		this.emit('response', new HTTPResponse('500', 'Socket Disconnected', 'HTTP/1.1'));
