@@ -18,7 +18,7 @@ function HTTPConnection (host, port) {
 
 	self.currentResponse = undefined;
 	self.currentRequest = undefined;
-	self.buffer = '';
+	self.buffer = new Buffer(0);
 
 	self.host = host;
 	self.port = port || 80;
@@ -76,18 +76,20 @@ HTTPConnection.prototype.connect = function() {
 
 // checks if the buffer has a complete header ready
 HTTPConnection.prototype.checkHeaderReady = function() {
-	if (this.buffer.indexOf("\r\n\r\n") !== -1) {
-		var header = this.buffer.split("\r\n\r\n", 1)[0];
-		this.buffer = this.buffer.substring(header.length + 4);
+	var index = this.buffer.indexOf("\r\n\r\n");
+	if (index !== -1) {
+		var header = this.buffer.slice(0, index).toString('ascii');
+		this.buffer = this.buffer.slice(index + 4);
 		this.emit('header', new HTTPResponse().parse(header + "\r\n\r\n"));
 	}
 };
 
 // checks if the buffer has the complete body ready
 HTTPConnection.prototype.checkBodyReady = function() {
-	if (this.buffer.length >= this.currentResponse.getHeader('content-length')) {
-		var body = this.buffer.substring(0, this.currentResponse.getHeader('content-length'));
-		this.buffer = this.buffer.substring(this.currentResponse.getHeader('content-length'));
+	var length = this.currentResponse.getHeader('content-length');
+	if (this.buffer.length >= length) {
+		var body = this.buffer.slice(0, length);
+		this.buffer = this.buffer.slice(length);
 		var res = this.currentResponse;
 		this.currentResponse = undefined;
 		res.body = body;
@@ -133,7 +135,7 @@ HTTPConnection.prototype.performNextRequest = function() {
 
 // implemented in order to be pipable
 HTTPConnection.prototype.write = function(data) {
-	this.buffer += data.toString('binary');
+	this.buffer = Buffer.concat([this.buffer, data]);
 
 	if (this.currentResponse === undefined) {
 		this.checkHeaderReady();

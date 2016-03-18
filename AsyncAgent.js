@@ -23,6 +23,8 @@ var events = require('events');
  * available options:
  * - cookies - optional object which enables cookies and will become the associated cookie storage for the object
  * - useragent - optional string which will be passed as the UserAgent header
+ * - allowedProtocols - optional array of allowed protocols (defaults to ['http:', 'https:'])
+ * - allowedCompression - optional array of allowed compression methods (defaults to ['gzip', 'deflate:'])
  */
 function AsyncAgent (options) {
 	options = options || {};
@@ -60,7 +62,7 @@ AsyncAgent.TestReflectConnection = require('./AsyncAgent/TestReflectConnection')
  * performs a specific HTTPRequest object
  * creates a connection to the associated authority and requests a response from it
  * returns the event emitter created by the connection associated with the protocol
- * the emitter should emit the 'response' event when a response has arrived
+ * the emitter will emit the 'response' event when a response has arrived
  * options is an optional object with options
  * available options:
  * - nocookies - if defined, disables setting and getting cookies for this request
@@ -146,15 +148,16 @@ AsyncAgent.prototype.parseResponse = function(emitter, request, response) {
 		if (this.compressors[compression] === undefined)
 			throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
 		else
-			this.compressors[compression].decompress(new Buffer(response.body, 'binary'), function (error, buffer) {
+			this.compressors[compression].decompress(response.body, function (error, buffer) {
 				if (error === undefined || error === null) {
-					response.body = buffer.toString('ascii');
+					response.body = buffer;
 					emitter.emit('response', response);
 				} else {
 					emitter.emit('error', error);
 				}
 			});
 	} else {
+		// response.body = response.body.toString();
 		emitter.emit('response', response);
 	}
 };
