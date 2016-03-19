@@ -41,8 +41,8 @@ function AsyncAgent (options) {
 	this.useragent = options.useragent;
 
 
-	this.allowedProtocols = options.allowedProtocols || [ 'http:', 'https:', 'test_reflect:', ];
-	this.allowedCompression = options.allowedCompression || [ 'gzip', 'deflate' ]; //
+	this.allowedProtocols = options.allowedProtocols || [ 'http:', 'https:', ]; // 'test_reflect:',
+	this.allowedCompression = options.allowedCompression || [ 'gzip', 'deflate', ];
 
 	this.compressors = {
 		'gzip': { compress: zlib.gzip, decompress: zlib.gunzip, streamDecompressor: zlib.createGunzip },
@@ -51,7 +51,7 @@ function AsyncAgent (options) {
 	this.connectors = {
 		'http:': AsyncAgent.HTTPConnection,
 		'https:': AsyncAgent.HTTPSConnection,
-		'test_reflect:': AsyncAgent.TestReflectConnection,
+		// 'test_reflect:': AsyncAgent.TestReflectConnection,
 	};
 
 	this.connectionsCache = {};
