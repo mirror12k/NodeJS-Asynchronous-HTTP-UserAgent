@@ -4,13 +4,13 @@
  */
 
 
+var fs = require('fs');
 var zlib = require('zlib');
 var events = require('events');
 
 /* TODO:
  * request/response history
  * proper HEAD requests
- * chunked transfer
  * to file loading
  * transfer-encoding: chunked
  * file parsing (title parsing, link listing, form listing, form submittion)
@@ -77,10 +77,21 @@ AsyncAgent.CookieJar = require('./AsyncAgent/CookieJar');
  * available options:
  * - nocookies - if defined, disables setting and getting cookies for this request
  * - callback - optional callback which will be called when the request is completed
+ * - chunked - if defined, forces the body of the request to be returned in chunks instead
+ *   of being accumulated in the response body. 'data' events will be emitted with the chunks
+ *   and 'end' will be emitted when all chunks have been returned
+ * - content_file - optional filepath. implies the 'chunked' option. any data returned by the
+ *   connection will be written to a new file at the given filepath
+ * - content_file_callback - optional callback which will be called after the content_file is
+ *   done being written and successfully closed
  */
 AsyncAgent.prototype.request = function (request, options) {
 	var self = this;
 	options = options || {};
+
+	// content_file option forces chunked mode
+	if (options.content_file)
+		options.chunked = true;
 
 	// prepare the request
 	request = this.prepareRequest(request, options);
@@ -94,25 +105,43 @@ AsyncAgent.prototype.request = function (request, options) {
 		res.once('response', this.setCookiesFromResponse.bind(this, request.path.protocol+'//'+request.path.host+':'+request.path.port));
 	if (options.callback !== undefined)
 		res.once('response', options.callback);
-	// res.once('header', emitter.emit.bind(emitter, 'header'));
-	res.once('header', function (response) {
-		emitter.emit('header', response);
-		var compression = response.getHeader('content-encoding');
-		if (compression !== undefined && options.chunked) {
-			if (self.compressors[compression] === undefined)
-				throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
-			var streamDecompressor = self.compressors[compression].streamDecompressor();
-			streamDecompressor.on('data', emitter.emit.bind(emitter, 'data'));
-			streamDecompressor.on('end', emitter.emit.bind(emitter, 'end'));
-			res.on('data', streamDecompressor.write.bind(streamDecompressor));
-			res.once('response', function () { streamDecompressor.end(); });
-		} else if (options.chunked) {
-			res.on('data', emitter.emit.bind(emitter, 'data'));
-			res.on('response', emitter.emit.bind(emitter, 'end'));
-		}
-	});
+
+	// if the request is chunked, we need to get the header and set up decompression for the body if compressed
+	if (options.chunked) {
+		res.once('header', function (response) {
+			var compression = response.getHeader('content-encoding');
+			if (compression !== undefined) {
+				if (self.compressors[compression] === undefined) // verify that the decompressor exists
+					throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
+				// create the stream decompressor
+				var streamDecompressor = self.compressors[compression].streamDecompressor();
+				// pipe the output to the emitter
+				streamDecompressor.on('data', emitter.emit.bind(emitter, 'data'));
+				streamDecompressor.on('end', emitter.emit.bind(emitter, 'end'));
+				// pipe the input from the request
+				res.on('data', streamDecompressor.write.bind(streamDecompressor));
+				res.once('response', function () { streamDecompressor.end(); });
+			} else {
+				// simply pass the chunks to the emitter
+				res.on('data', emitter.emit.bind(emitter, 'data'));
+				res.on('response', emitter.emit.bind(emitter, 'end'));
+			}
+		});
+	}
+
+	// if we have a content_file option, we must 
+	if (options.content_file) {
+		var handle = fs.createWriteStream(options.content_file);
+		// hook on to the emitter to make sure we get any potentially translated data
+		emitter.on('data', handle.write.bind(handle));
+		emitter.once('end', handle.end.bind(handle));
+		if (options.content_file_callback) // if there's a callback for the content_file, connect it
+			handle.once('finish', options.content_file_callback);
+	}
 	
+	// pipe any events
 	res.on('error', emitter.emit.bind(emitter, 'error'));
+	res.once('header', emitter.emit.bind(emitter, 'header'));
 	res.once('response', this.parseResponse.bind(this, emitter, options, request));
 
 	return emitter;
@@ -174,7 +203,7 @@ AsyncAgent.prototype.parseResponse = function(emitter, options, request, respons
 
 	var compression = response.getHeader('content-encoding');
 	if (compression !== undefined && ! options.chunked) {
-		if (this.compressors[compression] === undefined)
+		if (this.compressors[compression] === undefined) // verify that the decompressor exists
 			throw new AsyncAgent.HTTPError("error: no such compression method available: '"+compression+"'");
 		else
 			this.compressors[compression].decompress(response.body, function (error, buffer) {

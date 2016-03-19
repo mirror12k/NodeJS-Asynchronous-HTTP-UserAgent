@@ -47,7 +47,7 @@ test(obj.code, '404');
 
 
 var ua = new AsyncAgent();
-ua.get('https://example.org/').once('response', function (res) {
+ua.get('http://example.org/').once('response', function (res) {
 	console.log("got response: "+res);
 });
 ua.get('https://example.org/').once('response', function (res) {
@@ -61,6 +61,7 @@ setTimeout(function() {
 	});
 }, 2000);
 
+// ua.get('https://example.org/', { content_file: 'out.html' });
 
 // var ua = new AsyncAgent({ cookies: true });
 // ua.get('test_reflect://localhost/', { headers: { 'set-cookie': "a=b; test=qwerty" } }).once('response', function (res) {

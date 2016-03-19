@@ -87,7 +87,8 @@ HTTPConnection.prototype.checkHeaderReady = function() {
 // checks if the buffer has the complete body ready
 HTTPConnection.prototype.checkBodyReady = function() {
 	var length = this.currentResponse.getHeader('content-length');
-	if (this.currentRequest.chunked) {
+
+	if (this.currentRequest.chunked) { // if the request is chunked
 		if (this.buffer.length + this.currentRequest.read >= length) {
 			var cutlength = length - this.currentRequest.read;
 			if (cutlength > 0)
@@ -102,7 +103,7 @@ HTTPConnection.prototype.checkBodyReady = function() {
 				this.buffer = new Buffer(0);
 			}
 		}
-	} else {
+	} else { // if the request is not chunked
 		if (this.buffer.length >= length) {
 			var body = this.buffer.slice(0, length);
 			this.buffer = this.buffer.slice(length);
