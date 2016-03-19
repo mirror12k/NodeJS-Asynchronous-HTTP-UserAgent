@@ -40,21 +40,17 @@ function HTTPMessage (protocol, headers, body) {
  * parse a given string containing headers
 */
 HTTPMessage.prototype.parseHeaders = function(headers) {
-	var parsed = {};
+	var self = this;
 	headers.split("\n").filter(function (s) { return s.trim() !== ''; }).forEach(function (s) {
-		var header = s.split(':', 2);
-		var key = header[0].trim().toLowerCase(), val = header[1];
-		if (val === undefined)
-			val = '';
+		var key = s.split(':', 1)[0];
+		var val;
+		if (s.indexOf(':') !== -1)
+			val = s.substring(key.length+1);
 		else
-			val = val.trim();
-		if (parsed[key] === undefined) {
-			parsed[key] = [val];
-		} else {
-			parsed[key].push(val);
-		}
+			val = '';
+
+		self.pushHeader(key.trim(), val.trim());
 	});
-	this.headers = parsed;
 };
 
 
@@ -94,6 +90,24 @@ HTTPMessage.prototype.setHeader = function(header, val) {
 */
 HTTPMessage.prototype.setMultiHeader = function(header, val) {
 	this.headers[header.toLowerCase()] = val;
+};
+
+/**
+ * push a value to the list of values of a header key
+*/
+HTTPMessage.prototype.pushHeader = function(header, val) {
+	header = header.toLowerCase();
+	if (this.headers[header] === undefined)
+		this.headers[header] = [val];
+	else
+		this.headers[header].push(val);
+};
+
+/**
+ * remove a header and all of its values if it exists
+*/
+HTTPMessage.prototype.deleteHeader = function(header) {
+	delete this.headers[header];
 };
 
 /**

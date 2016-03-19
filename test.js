@@ -99,7 +99,7 @@ setTimeout(function() {
 // });
 
 // var ua = new AsyncAgent();
-// ua.get('https://www.google.com/').once('header', function (res) {
+// ua.get('https://www.google.com/', { chunked: true }).once('header', function (res) {
 // 	console.log("got header: "+res);
 // }).once('response', function (res) {
 // 	console.log("got response: "+res);

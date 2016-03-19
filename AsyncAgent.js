@@ -10,7 +10,6 @@ var events = require('events');
 
 /* TODO:
  * request/response history
- * fix header parsing bug
  * implement charset parsing and translating
  * file parsing (title parsing, link listing, form listing, form submittion)
  */
