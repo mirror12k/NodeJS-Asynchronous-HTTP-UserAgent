@@ -12,38 +12,54 @@ var HTTPResponse = require('./HTTPResponse');
  * creates a new un-connected HTTPConnection
  */
 function HTTPConnection (host, port) {
-	var self = this;
-	self.requestPipe = [];
-	self.isConnected = false;
+	// settings
+	this.host = host;
+	this.port = port || 80;
 
-	self.currentResponse = undefined;
-	self.currentRequest = undefined;
-	self.currentRead = 0;
-	self.buffer = new Buffer(0);
+	// data processing hooks
+	this.on('data', this.onData.bind(this));
+	this.on('header', this.onHeader.bind(this));
+	this.on('response', this.onResponse.bind(this));
 
-	self.host = host;
-	self.port = port || 80;
+	// high-level runtime values
+	this.requestPipe = [];
+	this.isConnected = false;
 
-	self.on('data', this.onData.bind(this));
-	self.on('header', this.onHeader.bind(this));
-	self.on('response', this.onResponse.bind(this));
+	// low-level runtime values
+	this.currentResponse = undefined;
+	this.currentRequest = undefined;
+	this.currentRead = 0;
+	this.currentTransferChunkSize = undefined;
+	this.buffer = new Buffer(0);
 }
 
 HTTPConnection.prototype = Object.create(events.EventEmitter.prototype);
 
 
 HTTPConnection.prototype.onData = function(data) {
-	var length = this.currentResponse.getHeader('content-length');
+	if (this.currentResponse.getHeader('transfer-encoding') === 'chunked') {
+		if (data.length === 0) {
+			this.emit('response', this.currentResponse);
+		} else {
+			if (this.currentRequest.chunked) { // if the request is chunked
+				this.currentRequest.emitter.emit('data', data);
+			} else { // if the request is not chunked
+				this.currentResponse.body = Buffer.concat([this.currentResponse.body, data]);
+			}
+		}
+	} else {
+		var length = this.currentResponse.getHeader('content-length');
 
-	if (this.currentRequest.chunked) { // if the request is chunked
-		this.currentRequest.emitter.emit('data', data);
-		this.currentRequest.read += data.length;
-		if (this.currentRequest.read >= length)
-			this.emit('response', this.currentResponse);
-	} else { // if the request is not chunked
-		this.currentResponse.body = Buffer.concat([this.currentResponse.body, data]);
-		if (this.currentResponse.body.length >= length)
-			this.emit('response', this.currentResponse);
+		if (this.currentRequest.chunked) { // if the request is chunked
+			this.currentRequest.emitter.emit('data', data);
+			this.currentRequest.read += data.length;
+			if (this.currentRequest.read >= length)
+				this.emit('response', this.currentResponse);
+		} else { // if the request is not chunked
+			this.currentResponse.body = Buffer.concat([this.currentResponse.body, data]);
+			if (this.currentResponse.body.length >= length)
+				this.emit('response', this.currentResponse);
+		}
 	}
 };
 
@@ -114,16 +130,29 @@ HTTPConnection.prototype.checkHeaderReady = function() {
 // checks if the buffer has the complete body ready
 HTTPConnection.prototype.checkBodyReady = function() {
 	if (this.currentResponse.getHeader('transfer-encoding') === 'chunked') {
-	// 	if (this.currentRequest.transferChunkSize === undefined) {
-	// 		var index = this.buffer.indexOf("\r\n");
-	// 		if (index !== -1) {
-	// 			this.currentRequest.transferChunkSize = parseInt(this.buffer.slice(0, index).toString('ascii'), 16);
-	// 			this.buffer = this.buffer.slice(index+2);
-	// 		}
-	// 	} else if (this.buffer.length >= this.currentRequest.transferChunkSize + 2) {
-
-	// 	}
-		throw 'nope';
+		var done = false;
+		while (!done) {
+			if (this.currentTransferChunkSize === undefined) { // find a chunk size if we dont have one
+				var index = this.buffer.indexOf("\r\n");
+				if (index !== -1) {
+					// console.log("debug got chunk size: "+ this.buffer.slice(0, index));
+					this.currentTransferChunkSize = parseInt(this.buffer.slice(0, index).toString('ascii'), 16);
+					this.buffer = this.buffer.slice(index+2);
+				} else {
+					done = true;
+				}
+			} else if (this.buffer.length >= this.currentTransferChunkSize + 2) { // carve a chunk if we have the size
+				var data = this.buffer.slice(0, this.currentTransferChunkSize);
+				this.buffer = this.buffer.slice(this.currentTransferChunkSize + 2);
+				// console.log("debug sending chunk size: "+ this.currentTransferChunkSize);
+				this.currentTransferChunkSize = undefined;
+				this.emit('data', data);
+				if (data.length === 0) // explicitly leave the loop if we have reached the zero chunk
+					done = true;
+			} else {
+				done = true;
+			}
+		}
 	} else {
 		var length = this.currentResponse.getHeader('content-length');
 		var data;

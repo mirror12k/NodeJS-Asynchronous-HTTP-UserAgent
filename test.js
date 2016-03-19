@@ -97,3 +97,21 @@ setTimeout(function() {
 // }).once('end', function () {
 // 	console.log("got end");
 // });
+
+// var ua = new AsyncAgent();
+// ua.get('https://www.google.com/').once('header', function (res) {
+// 	console.log("got header: "+res);
+// }).once('response', function (res) {
+// 	console.log("got response: "+res);
+// }).on('data', function (data) {
+// 	console.log("got chunk: "+ data);
+// }).once('end', function () {
+// 	console.log("got end");
+// });
+
+// ua.get('https://www.google.com/').on('response', function (res) {
+// 	console.log("got response:", res);
+// 	ua.get('https://www.google.com/').on('response', function (res) {
+// 		console.log("got response2:", res);
+// 	});
+// });
