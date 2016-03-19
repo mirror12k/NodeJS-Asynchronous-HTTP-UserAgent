@@ -11,7 +11,6 @@ var events = require('events');
 /* TODO:
  * request/response history
  * proper HEAD requests
- * to file loading
  * transfer-encoding: chunked
  * file parsing (title parsing, link listing, form listing, form submittion)
  */
@@ -230,6 +229,14 @@ AsyncAgent.prototype.parseResponse = function(emitter, options, request, respons
 AsyncAgent.prototype.get = function (url, options) {
 	options = options || {};
 	return this.request(new AsyncAgent.HTTPRequest('GET', url, 'HTTP/1.1', options.headers, options.body), options);
+};
+
+/**
+ * same as AsyncAgent.get except with a method of 'HEAD'
+ */
+AsyncAgent.prototype.head = function (url, options) {
+	options = options || {};
+	return this.request(new AsyncAgent.HTTPRequest('HEAD', url, 'HTTP/1.1', options.headers, options.body), options);
 };
 
 /**

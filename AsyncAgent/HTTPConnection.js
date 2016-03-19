@@ -26,7 +26,7 @@ function HTTPConnection (host, port) {
 	self.on('header', function (res) {
 		self.currentRequest.emitter.emit('header', res);
 
-		if (res.getHeader('content-length') === undefined) {
+		if (res.getHeader('content-length') === undefined || self.currentRequest.request.method === 'HEAD') {
 			self.emit('response', res);
 		} else {
 			self.currentResponse = res;
