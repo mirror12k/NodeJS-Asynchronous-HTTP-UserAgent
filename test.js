@@ -88,6 +88,9 @@ setTimeout(function() {
 
 
 // var ua = new AsyncAgent();
+// ua.head('https://www.yahoo.com/').once('response', function (res) {
+// 	console.log("got response: "+res);
+// });
 // ua.get('https://www.yahoo.com/', { chunked: true }).once('header', function (res) {
 // 	console.log("got header: "+res);
 // }).once('response', function (res) {
